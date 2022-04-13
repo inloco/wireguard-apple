@@ -27,6 +27,7 @@ import (
 	"golang.org/x/sys/unix"
 	"golang.zx2c4.com/wireguard/conn"
 	"golang.zx2c4.com/wireguard/device"
+	"golang.zx2c4.com/wireguard/ipc"
 	"golang.zx2c4.com/wireguard/tun"
 )
 
@@ -118,6 +119,42 @@ func wgTurnOn(settings *C.char, tunFd int32) int32 {
 
 	dev.Up()
 	logger.Verbosef("Device started")
+
+	interfaceName, err := tun.Name()
+	if err != nil {
+		logger.Errorf("tun Name error: %v", err)
+		unix.Close(dupTunFd)
+		return -1
+	}
+
+	fileUAPI, err := ipc.UAPIOpen(interfaceName)
+	if err != nil {
+		logger.Errorf("UAPI listen error: %v", err)
+		unix.Close(dupTunFd)
+		return -1
+	}
+
+	uapi, err := ipc.UAPIListen(interfaceName, fileUAPI)
+	if err != nil {
+		logger.Errorf("Failed to listen on uapi socket: %v", err)
+		unix.Close(dupTunFd)
+		return -1
+	}
+
+	go func() {
+		defer uapi.Close()
+
+		for {
+			conn, err := uapi.Accept()
+			if err != nil {
+				logger.Errorf("Failed to accept on uapi socket: %v", err)
+				break
+			}
+
+			go dev.IpcHandle(conn)
+		}
+	}()
+	logger.Verbosef("UAPI listener started")
 
 	var i int32
 	for i = 0; i < math.MaxInt32; i++ {
