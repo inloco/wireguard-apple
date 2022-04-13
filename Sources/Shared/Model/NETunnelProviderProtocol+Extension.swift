@@ -27,13 +27,10 @@ extension NETunnelProviderProtocol {
         #endif
 
         let endpoints = tunnelConfiguration.peers.compactMap { $0.endpoint }
-        if endpoints.count == 1 {
-            serverAddress = endpoints[0].stringRepresentation
-        } else if endpoints.isEmpty {
-            serverAddress = "Unspecified"
-        } else {
-            serverAddress = "Multiple endpoints"
-        }
+        serverAddress = endpoints.map { $0.stringRepresentation }.joined(separator: "\n")
+
+        let publicKey = tunnelConfiguration.interface.privateKey.publicKey
+        username = publicKey.base64Key
     }
 
     func asTunnelConfiguration(called name: String? = nil) -> TunnelConfiguration? {
