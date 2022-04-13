@@ -28,6 +28,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ aNotification: Notification) {
         activateExtension()
+        observeNotifications()
 
         Logger.configureGlobal(tagged: "APP", withFilePath: FileManager.logFileURL?.path)
         registerLoginItem(shouldLaunchAtLogin: true)
@@ -77,6 +78,38 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         activationRequest.delegate = self
 
         OSSystemExtensionManager.shared.submitRequest(activationRequest)
+    }
+
+    private func observeNotifications() {
+        let notificationCenter = NSWorkspace.shared.notificationCenter
+
+        notificationCenter.addObserver(self,
+                                       selector: #selector(workspaceDidReceiveNotification(_:)),
+                                       name: NSWorkspace.sessionDidResignActiveNotification,
+                                       object: nil)
+
+        notificationCenter.addObserver(self,
+                                       selector: #selector(workspaceDidReceiveNotification(_:)),
+                                       name: NSWorkspace.sessionDidBecomeActiveNotification,
+                                       object: nil)
+    }
+
+    @objc
+    private func workspaceDidReceiveNotification(_ notification: Notification) {
+        let name = notification.name
+
+        print("workspaceDidReceiveNotification: \(name.rawValue)")
+
+        switch name {
+        case NSWorkspace.sessionDidResignActiveNotification:
+            tunnelsManager?.redeactivateTunnels()
+
+        case NSWorkspace.sessionDidBecomeActiveNotification:
+            tunnelsManager?.reactivateTunnels()
+
+        default:
+            print("unhandledNotification: \(name.rawValue)")
+        }
     }
 
     @objc func confirmAndQuit() {

@@ -548,6 +548,24 @@ class TunnelsManager {
     static func tunnelNameIsLessThan(_ lhs: String, _ rhs: String) -> Bool {
         return lhs.compare(rhs, options: [.caseInsensitive, .diacriticInsensitive, .widthInsensitive, .numeric]) == .orderedAscending
     }
+
+    func redeactivateTunnels() {
+        tunnels
+            .filter { $0.status == .active || $0.status == .activating }
+            .forEach {
+                $0.shouldReactivate = true
+                startDeactivation(of: $0)
+            }
+    }
+
+    func reactivateTunnels() {
+        tunnels
+            .filter { $0.shouldReactivate }
+            .forEach {
+                $0.shouldReactivate = false
+                startActivation(of: $0)
+            }
+    }
 }
 
 private func lastErrorTextFromNetworkExtension(for tunnel: TunnelContainer) -> (title: String, message: String)? {
@@ -595,6 +613,8 @@ class TunnelContainer: NSObject {
     var activationTimer: Timer?
     var deactivationTimer: Timer?
     var onDeactivated: (() -> Void)?
+
+    var shouldReactivate = false
 
     fileprivate var tunnelProvider: NETunnelProviderManager {
         didSet {
