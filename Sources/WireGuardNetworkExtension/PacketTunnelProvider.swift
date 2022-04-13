@@ -21,8 +21,8 @@ class PacketTunnelProvider: NEPacketTunnelProvider {
 
         wg_log(.info, message: "Starting tunnel from the " + (activationAttemptId == nil ? "OS directly, rather than the app" : "app"))
 
-        guard let tunnelProviderProtocol = self.protocolConfiguration as? NETunnelProviderProtocol,
-              let tunnelConfiguration = tunnelProviderProtocol.asTunnelConfiguration() else {
+        guard let wgQuickConfig = options?["WgQuickConfig"] as? String,
+              let tunnelConfiguration = try? TunnelConfiguration(fromWgQuickConfig: wgQuickConfig, called: nil) else {
             errorNotifier.notify(PacketTunnelProviderError.savedProtocolConfigurationIsInvalid)
             completionHandler(PacketTunnelProviderError.savedProtocolConfigurationIsInvalid)
             return

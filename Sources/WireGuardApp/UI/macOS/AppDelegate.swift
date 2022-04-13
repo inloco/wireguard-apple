@@ -3,6 +3,7 @@
 
 import Cocoa
 import ServiceManagement
+import SystemExtensions
 
 @NSApplicationMain
 class AppDelegate: NSObject, NSApplicationDelegate {
@@ -26,6 +27,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationDidFinishLaunching(_ aNotification: Notification) {
+        activateExtension()
+
         Logger.configureGlobal(tagged: "APP", withFilePath: FileManager.logFileURL?.path)
         registerLoginItem(shouldLaunchAtLogin: true)
 
@@ -63,6 +66,17 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 }
             }
         }
+    }
+
+    private func activateExtension() {
+        let appId = Bundle.main.bundleIdentifier!
+        let extId = "\(appId).network-extension"
+
+        let activationRequest = OSSystemExtensionRequest.activationRequest(forExtensionWithIdentifier: extId,
+                                                                           queue: DispatchQueue.main)
+        activationRequest.delegate = self
+
+        OSSystemExtensionManager.shared.submitRequest(activationRequest)
     }
 
     @objc func confirmAndQuit() {
@@ -225,6 +239,27 @@ extension AppDelegate: StatusMenuWindowDelegate {
             manageTunnelsWindowObject?.makeKeyAndOrderFront(self)
             completion?(manageTunnelsWindowObject)
         }
+    }
+}
+
+extension AppDelegate: OSSystemExtensionRequestDelegate {
+    func request(_ request: OSSystemExtensionRequest, didFinishWithResult result: OSSystemExtensionRequest.Result) {
+        print("request:didFinishWithResult: \(request.identifier) \(result.rawValue)")
+    }
+
+    func request(_ request: OSSystemExtensionRequest, didFailWithError error: Error) {
+        print("request:didFailWithError: \(request.identifier) \(error.localizedDescription)")
+    }
+
+    func requestNeedsUserApproval(_ request: OSSystemExtensionRequest) {
+        print("requestNeedsUserApproval: \(request.identifier)")
+    }
+
+    func request(_ request: OSSystemExtensionRequest,
+                 actionForReplacingExtension existing: OSSystemExtensionProperties,
+                 withExtension ext: OSSystemExtensionProperties) -> OSSystemExtensionRequest.ReplacementAction {
+        print("request:actionForReplacingExtension:withExtension: \(request.identifier) \(existing.bundleShortVersion) \(ext.bundleShortVersion)")
+        return .replace
     }
 }
 

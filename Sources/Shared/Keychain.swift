@@ -43,24 +43,14 @@ class Keychain {
         items[kSecAttrSynchronizable] = false
         items[kSecAttrAccessible] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
 
-        guard let extensionPath = Bundle.main.builtInPlugInsURL?.appendingPathComponent("WireGuardNetworkExtension.appex", isDirectory: true).path else {
-            wg_log(.error, staticMessage: "Unable to determine app extension path")
-            return nil
-        }
-        var extensionApp: SecTrustedApplication?
         var mainApp: SecTrustedApplication?
-        ret = SecTrustedApplicationCreateFromPath(extensionPath, &extensionApp)
-        if ret != kOSReturnSuccess || extensionApp == nil {
-            wg_log(.error, message: "Unable to create keychain extension trusted application object: \(ret)")
-            return nil
-        }
         ret = SecTrustedApplicationCreateFromPath(nil, &mainApp)
         if ret != errSecSuccess || mainApp == nil {
             wg_log(.error, message: "Unable to create keychain local trusted application object: \(ret)")
             return nil
         }
         var access: SecAccess?
-        ret = SecAccessCreate(itemLabel as CFString, [extensionApp!, mainApp!] as CFArray, &access)
+        ret = SecAccessCreate(itemLabel as CFString, [mainApp!] as CFArray, &access)
         if ret != errSecSuccess || access == nil {
             wg_log(.error, message: "Unable to create keychain ACL object: \(ret)")
             return nil
